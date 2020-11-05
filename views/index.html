@@ -207,10 +207,13 @@
 
     connectToServer = () => {
         var options = { 'forceNew': true };
+        console.log(host)
+        console.log(port)
+
         var url = 'http://' + host + ':' + port;
         socket = io.connect(url, options);
 
-        socket.on('connect', () => {
+        socket.on('connection', () => {
             println('웹 소켓 서버에 연결되었습니다. : ' + url);
 
             socket.on('message', (message) => {

@@ -57,6 +57,6 @@ app.use(function(err, req, res, next) {
 var http = require('http').createServer(app);
 var controllers = require('./routes/controller');
 controllers.io.listen(http);
-http.listen(3000, () => {
-  console.log('http://localhost:3000')
+http.listen(3000, '192.168.0.120', () => {
+  console.log('http://192.168.0.120:3000')
 });
