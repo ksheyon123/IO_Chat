@@ -1,33 +1,58 @@
-var express = require('express');
-var { graphqlHTTP } = require('express-graphql');
-var { buildSchema } = require('graphql');
- 
-// Construct a schema, using GraphQL schema language
+const express = require('express');
+const { graphqlHTTP } = require('express-graphql');
+const { buildSchema } = require('graphql');
+const { rndStringGenerator } = require('./rndStringGenerator');
+let user = [];
 var schema = buildSchema(`
-  type Query {
-    quoteOfTheDay: String
-    random: Float!
-    rollThreeDice: [Int]
+  type User {
+    id : ID!
+    name : String!
+    friends : [ID]!
   }
-`);
- 
-// The root provides a resolver function for each API endpoint
-var root = {
-  quoteOfTheDay: () => {
-    return Math.random() < 0.5 ? 'Take it easy' : 'Salvation lies within';
+  input UserInput {
+    name : String!
+  }
+  type Query {
+    user(id : ID!) : User
+    users : User
+  }
+
+  type Mutation {
+    createUser(input : UserInput) : User
+    insertFriend(id : ID!) : User
+  }
+`)
+
+const resolver = {
+  user : ({id}) => {
+    var data = Object.keys(user).filter(element => {
+      if (element.id == id) {
+        return element;
+      }
+    })
+    return user[data]
   },
-  random: () => {
-    return Math.random();
+  users : () => {
+    return user
   },
-  rollThreeDice: () => {
-    return [1, 2, 3].map(_ => 1 + Math.floor(Math.random() * 6));
+  createUser: ({ input }) => {
+    var objectID = rndStringGenerator();
+    user.push({id : objectID, name : input.name, friends : []})
+    return { id: objectID, name: input.name, friends : [] };
   },
-};
- 
+  insertFriend : ({id, targetID}) => {
+    Object.keys(user).filter(element => {
+      if (element.id == id) {
+
+      }
+    })
+  } 
+}
+
 var app = express();
 app.use('/graphql', graphqlHTTP({
   schema: schema,
-  rootValue: root,
+  rootValue: resolver,
   graphiql: true,
 }));
 app.listen(4000);
