@@ -2,6 +2,7 @@ const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
 const { buildSchema } = require('graphql');
 const { rndStringGenerator } = require('./rndStringGenerator');
+
 let user = [];
 let Rooms = []
 let Messages = [];
@@ -16,8 +17,8 @@ type User {
 }
 
 type Room {
-  owner : ID!
-  room_id : ID!
+  id: ID!
+  user : [User!]
   name : String!
   newlog : [Message!]
   oldlog : [Message!]
@@ -25,7 +26,6 @@ type Room {
 }
 
 type Message {
-  id : ID!
   room_id : ID!
   message : String!
   reg_time : String!
@@ -39,12 +39,11 @@ input UserInput {
 }
 
 input RoomInput {
-  owner : ID!
   name : String!
+  user : User!
 }
 
 input MessageInput {
-  id : ID!
   room_id : ID!
   message : String!
   read : Boolean!
@@ -53,6 +52,7 @@ input MessageInput {
 type Query {
   user(id : ID!) : User
   users : [User!]
+  myRooms(id : ID!) : [Room!]
 }
 
 type Mutation {
@@ -82,13 +82,14 @@ const resolver = {
     })
     return user[data]
   },
-
   users: () => {
     console.log(user)
     console.log()
     return user;
   },
+  getRooms : ({id}) => {
 
+  },
   addUser: ({ input }) => {
     var objectID = rndStringGenerator();
     var rawObject = {
@@ -125,7 +126,7 @@ const resolver = {
     Rooms.push(input);
     return input;
   },
-  joinRoom : ({room_id}) => {
+  joinRoom : ({id, room_id}) => {
     
   },
   leaveRoom : ({room_id}) => {
