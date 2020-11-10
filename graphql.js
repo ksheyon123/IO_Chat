@@ -4,7 +4,7 @@ const { buildSchema } = require('graphql');
 const { rndStringGenerator } = require('./rndStringGenerator');
 let user = [];
 let Rooms = []
-let Chattings = [];
+let Messages = [];
 var schema = buildSchema(`
 type User {
   id : ID!
@@ -19,9 +19,17 @@ type Room {
   owner : ID!
   room_id : ID!
   name : String!
-  newlog : [Chat!]
-  oldlog : [Chat!]
+  newlog : [Message!]
+  oldlog : [Message!]
   reg_date : String!
+}
+
+type Message {
+  id : ID!
+  room_id : ID!
+  message : String!
+  reg_time : String!
+  read : Boolean!
 }
 
 input UserInput {
@@ -33,15 +41,12 @@ input UserInput {
 input RoomInput {
   owner : ID!
   name : String!
-  reg_date : String!
 }
 
-type Chat {
+input MessageInput {
   id : ID!
-  writer_id : ID!
   room_id : ID!
   message : String!
-  reg_time : String!
   read : Boolean!
 }
 
@@ -54,6 +59,7 @@ type Mutation {
   addUser(input : UserInput) : User
   addFriend(id : ID!, input : UserInput) : User
   createRoom (input : RoomInput) : Room
+  newMessage (input : MessageInput) : Message
 }
 `)
 
@@ -79,6 +85,7 @@ const resolver = {
 
   users: () => {
     console.log(user)
+    console.log()
     return user;
   },
 
@@ -114,11 +121,12 @@ const resolver = {
   createRoom: ({ input }) => {
     var roomID = rndStringGenerator();
     input["room_id"] = roomID;
-    Rooms.push(input)
-    return input
+    input["reg_date"] = new Date();
+    Rooms.push(input);
+    return input;
   },
   joinRoom : ({room_id}) => {
-
+    
   },
   leaveRoom : ({room_id}) => {
 
