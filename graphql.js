@@ -6,47 +6,56 @@ let user = [];
 let Rooms = []
 let Chattings = [];
 var schema = buildSchema(`
-  type User {
-    id : ID!
-    name : String!
-    phone : String!
-    email : String!
-    friends : [User!]
-    rooms : [Room!]
-  }
-  input UserInput {
-    name : String!
-    phone : String!
-    email : String!
-  }
+type User {
+  id : ID!
+  name : String
+  phone : String
+  email : String
+  friends : [User!]
+  rooms : [Room!]
+}
 
-  input FriendInput {
-    id : ID
-    name : String
-    phone : String
-    email : String
-  }
+type Room {
+  owner : ID!
+  room_id : ID!
+  user : [UserInput!]
+  name : String!
+  newlog : [Chat!]
+  oldlog : [Chat!]
+  reg_date : String!
+}
 
-  type Room {
-    id : ID!
-    name : String!
-    newlog : [Chat!]
-    oldlog : [Chat!]
-  }
+input UserInput {
+  name : String
+  phone : String
+  email : String
+}
 
-  type Chat {
-    data : String!
-  }
+input RoomInput {
+  owner : ID!
+  user : [UserInput!]
+  name : String!
+  reg_date : String!
+}
 
-  type Query {
-    user(id : ID!) : User
-    users : User
-  }
+type Chat {
+  owner : ID!
+  room_id : ID!
+  message : String!
+  reg_time : String!
+  read : Boolean!
+}
 
-  type Mutation {
-    addUser(input : UserInput) : User
-    addFriend(input : FriendInput) : User
-  }
+type Query {
+  user(id : ID!) : User
+  users : [User!]
+}
+
+type Mutation {
+  addUser(input : UserInput) : User
+  addFriend(id : ID!, input : UserInput) : User
+  createRoom (input : RoomInput, input : UserInput) : Room
+}
 `)
 
 class User {
@@ -70,7 +79,8 @@ const resolver = {
   },
 
   users: () => {
-    return user
+    console.log(user)
+    return user;
   },
 
   addUser: ({ input }) => {
@@ -83,24 +93,27 @@ const resolver = {
     user.push(rawObject);
     return new User(rawObject);
   },
-  addFriend: ({ input }) => {
-    console.log(input)
-    console.log(Object.keys(user))
-
-    var data = Object.keys(user).filter(element => {
-      console.log(element)
-      if (element.name == input.name) {
-        return element
-      }
-    });
-    var data = Object.keys(user).filter(element => {
+  addFriend: ({ id, input }) => {
+    console.log(id, input)
+    console.log('user', user)
+    var index = user.findIndex(element => {
       if (element.id == id) {
-        return element
+        return element;
       }
     });
-    user[data].friends.push()
-
-    return new User()
+    console.log(user[index])
+    var targetIndex = user.findIndex(element => {
+      if (element.phone == input.phone) {
+        return element;
+      }
+    });
+    console.log('targetID', targetIndex)
+    user[index].friends.push(user[targetIndex])
+    console.log(user[index])
+    return user[index]
+  },
+  createRoom: ({ input }) => {
+    console.log(input)
   }
 }
 
