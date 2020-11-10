@@ -18,7 +18,6 @@ type User {
 type Room {
   owner : ID!
   room_id : ID!
-  user : [UserInput!]
   name : String!
   newlog : [Chat!]
   oldlog : [Chat!]
@@ -33,13 +32,13 @@ input UserInput {
 
 input RoomInput {
   owner : ID!
-  user : [UserInput!]
   name : String!
   reg_date : String!
 }
 
 type Chat {
-  owner : ID!
+  id : ID!
+  writer_id : ID!
   room_id : ID!
   message : String!
   reg_time : String!
@@ -54,7 +53,7 @@ type Query {
 type Mutation {
   addUser(input : UserInput) : User
   addFriend(id : ID!, input : UserInput) : User
-  createRoom (input : RoomInput, input : UserInput) : Room
+  createRoom (input : RoomInput) : Room
 }
 `)
 
@@ -113,6 +112,18 @@ const resolver = {
     return user[index]
   },
   createRoom: ({ input }) => {
+    var roomID = rndStringGenerator();
+    input["room_id"] = roomID;
+    Rooms.push(input)
+    return input
+  },
+  joinRoom : ({room_id}) => {
+
+  },
+  leaveRoom : ({room_id}) => {
+
+  },
+  newMessage : ({input}) => {
     console.log(input)
   }
 }
