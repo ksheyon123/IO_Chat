@@ -10,4 +10,4 @@ var userSchema = new Schema({
     rooms : Array
 })
 
-module.exports = mongoose.model("user", userSchema);
+module.exports = mongoose.model("user", userSchema)

@@ -16,7 +16,7 @@ let Rooms = []
 let Messages = [];
 var schema = buildSchema(`
 type User {
-  id : ID!
+  _id : ID!
   name : String
   phone : String
   email : String
@@ -25,7 +25,7 @@ type User {
 }
 
 type Room {
-  id: ID!
+  _id: ID!
   user : [User!]
   name : String!
   newlog : [Message!]
@@ -58,14 +58,14 @@ input MessageInput {
 }
 
 type Query {
-  user(id : ID!) : User
+  user(_id : ID!) : User
   users : [User!]
-  myRooms(id : ID!) : [Room!]
+  myRooms(_id : ID!) : [Room!]
 }
 
 type Mutation {
   addUser(input : UserInput) : User
-  addFriend(id : ID!, input : UserInput) : User
+  addFriend(_id : ID!, input : UserInput) : User
   createRoom (input : RoomInput) : Room
   newMessage (input : MessageInput) : Message
 }
@@ -87,13 +87,11 @@ const resolver = {
   },
   addUser: async ({ input }) => {
     console.log("GraphQL Add User : ", input)
-    var objectID = rndStringGenerator();
     var rawObject = {
-      id: objectID, name: input.name, phone: input.phone, email: input.email, friends: [], rooms : []
+      name: input.name, phone: input.phone, email: input.email, friends: [], rooms : []
     }
     try {
       var user = new User();
-      user.id = rawObject.id;
       user.name = rawObject.name;
       user.phone = rawObject.phone;
       user.email = rawObject.email;
@@ -111,32 +109,32 @@ const resolver = {
       console.log(err);
     }
   },
-  users: () => {
-    console.log(user)
-    console.log()
-    return user;
+  users: async () => {
+    try {
+      var users = await User.find((err, user) => {
+        if (err) return console.log(err);
+        return user;
+      });
+      return users;
+    } catch (err) {
+      console.log(err);
+    }
   },
   getRooms: ({ id }) => {
 
   },
-  addFriend: ({ id, input }) => {
-    console.log(id, input)
-    console.log('user', user)
-    var index = user.findIndex(element => {
-      if (element.id == id) {
-        return element;
-      }
-    });
-    console.log(user[index])
-    var targetIndex = user.findIndex(element => {
-      if (element.phone == input.phone) {
-        return element;
-      }
-    });
-    console.log('targetID', targetIndex)
-    user[index].friends.push(user[targetIndex])
-    console.log(user[index])
-    return user[index]
+  addFriend: async ({ _id, input }) => {
+    try {
+      await User.updateOne({ _id : _id }, {$push : {friends : input}});
+      var user = await User.findOne({ _id }, (err, user) => {
+        if (err) return console.log(err)
+        if (!user) return console.log("사용자가 없습니다")
+        return user;
+      });
+      return user;
+    } catch (err) {
+      console.log(err);
+    }
   },
   createRoom: ({ input }) => {
     var roomID = rndStringGenerator();
