@@ -151,16 +151,13 @@ const resolver = {
   },
   createRoom: async ({ input }) => {
     console.log(input)
-    var rawObject = new Object();
+    var reg_date = new Date().toISOString();
+    var rawObject = {user : input.id, name : input.name, logs : [], reg_date : reg_date}
     try {
-
-      var user = await User.findOne({_id : input.id});
-      var reg_date = new Date().toISOString();
-      rawObject = {user : user, name : input.name, logs : [], reg_date : reg_date}
       var room = new Room();
       room.user = [rawObject.user];
       room.name = rawObject.name;
-      room.logs = [];
+      room.logs = rawObject.logs;
       room.reg_date = rawObject.reg_date;
       // Replace fakeDatabase to real database Function
       room.save((err) => {
@@ -169,7 +166,9 @@ const resolver = {
           return err;
         }
       });
+      var  user = await User.findOne({_id : input.id});
       await User.updateOne({_id : input.id}, {$push : {rooms : room._id}});
+      room.user = user;
       return room;
     } catch (err) {
       console.log(err);
@@ -180,6 +179,7 @@ const resolver = {
       await User.updateOne({_id : _id }, {$addToSet : {rooms : room_id}});
       await Room.updateOne({_id : room_id} , {$addToSet : {user : _id}});
       var room = await Room.findOne({_id : room_id});
+      console.log(room)
       var uID_List = room.user;
       var uList = await User.find({ _id : uID_List});
       room.user = uList;
@@ -195,8 +195,12 @@ const resolver = {
     try {
       var room = await Room.findOne({_id : _id});
       var mList = await Message.find({ room_id : _id});
+
+      var uID_List = room.user;
+      var user = await User.find({_id : uID_List});
       console.log("room : ", room);
       console.log("mList : ", mList)
+      room.user = user;
       room.logs = mList;
       return room;
     } catch (err) {
