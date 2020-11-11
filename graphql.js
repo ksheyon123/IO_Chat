@@ -211,7 +211,7 @@ const resolver = {
     console.log(input);
     var rawObject = {
       room_id : input.room_id, 
-      owner : input.id,
+      owner : input.owner,
       message : input.message,
       reg_time : new Date().toISOString(),
     }
