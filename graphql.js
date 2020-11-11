@@ -4,6 +4,7 @@ const { buildSchema } = require('graphql');
 const { rndStringGenerator } = require('./rndStringGenerator');
 const User = require('./user');
 const Room = require('./room');
+const Message = require('./message');
 
 const mongoose = require('mongoose');
 var db = mongoose.connection;
@@ -35,7 +36,6 @@ type Message {
   owner : ID!
   message : String!
   reg_time : String!
-  read : Int!
 }
 
 input UserInput {
@@ -51,13 +51,14 @@ input RoomInput {
 
 input MessageInput {
   room_id : ID!
+  owner : ID!
   message : String!
 }
 
 type Query {
   user(_id : ID!) : User
   users : [User!]
-  myRooms(_id : ID!) : [Room!]
+  room(_id : ID!) : Room!
 }
 
 type Mutation {
@@ -127,9 +128,7 @@ const resolver = {
       console.log(err);
     }
   },
-  getRooms: ({ id }) => {
-
-  },
+  
   addFriend: async ({ _id, target_id }) => {
     try {
       await User.updateOne({ _id: _id }, { $addToSet: { friends: target_id } });
@@ -192,8 +191,42 @@ const resolver = {
   leaveRoom: ({ room_id }) => {
 
   },
-  newMessage: ({ input }) => {
-    console.log(input)
+  room : async ({ _id }) => {
+    try {
+      var room = await Room.findOne({_id : _id});
+      var mList = await Message.find({ room_id : _id});
+      console.log("room : ", room);
+      console.log("mList : ", mList)
+      room.logs = mList;
+      return room;
+    } catch (err) {
+      console.log(err);
+    }
+  },
+  newMessage: async ({ input }) => {
+    console.log(input);
+    var rawObject = {
+      room_id : input.room_id, 
+      owner : input.id,
+      message : input.message,
+      reg_time : new Date().toISOString(),
+    }
+    try {
+      var message = new Message();
+      message.room_id = rawObject.room_id;
+      message.owner = rawObject.owner;
+      message.message = rawObject.message;
+      message.reg_time = rawObject.reg_time;
+      message.save((err) => {
+        if (err) {
+          console.error(err);
+          return err;
+        }
+      });
+      return new Message(rawObject);
+    } catch (err) {
+      console.log(err);
+    }
   }
 }
 
