@@ -2,7 +2,6 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var roomSchema = new Schema({
-    id : String,
     user : Array,
     name : String,
     newlog : Array,

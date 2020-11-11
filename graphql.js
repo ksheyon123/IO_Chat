@@ -3,6 +3,7 @@ const { graphqlHTTP } = require('express-graphql');
 const { buildSchema } = require('graphql');
 const { rndStringGenerator } = require('./rndStringGenerator');
 const User = require('./user');
+const Room = require('./room');
 
 const mongoose = require('mongoose');
 var db = mongoose.connection;
@@ -11,9 +12,6 @@ db.once('open', () => {
 })
 mongoose.connect("mongodb://localhost:27017/local", { useNewUrlParser: true, useUnifiedTopology: true });
 
-let user = [];
-let Rooms = []
-let Messages = [];
 var schema = buildSchema(`
 type User {
   _id : ID!
@@ -65,22 +63,22 @@ type Query {
 
 type Mutation {
   addUser(input : UserInput) : User
-  addFriend(_id : ID!, input : UserInput) : User
+  addFriend(_id : ID!, target_id : ID!) : User
   createRoom (input : RoomInput) : Room
   newMessage (input : MessageInput) : Message
 }
 `)
 
 const resolver = {
-  user: async ({ id }) => {
-    console.log("GraphQL Get User : ", id)
+  user: async ({ _id }) => {
+    console.log("GraphQL Get User : ", _id)
     try {
-      await User.findOne({ id }, (err, user) => {
+      var user = await User.findOne({ _id : _id }, (err, user) => {
         if (err) return console.log(err)
         if (!user) return console.log("사용자가 없습니다")
-        console.log(user)
         return user;
-      }).catch(err => console.log(err))
+      });
+      return user;
     } catch (err) {
       console.log("User Error : ", err);
     }
@@ -115,6 +113,8 @@ const resolver = {
         if (err) return console.log(err);
         return user;
       });
+      console.log(users)
+
       return users;
     } catch (err) {
       console.log(err);
@@ -123,25 +123,35 @@ const resolver = {
   getRooms: ({ id }) => {
 
   },
-  addFriend: async ({ _id, input }) => {
+  addFriend: async ({ _id, target_id }) => {
+    console.log("_id", _id, " target_id ", target_id)
     try {
-      await User.updateOne({ _id : _id }, {$push : {friends : input}});
+      await User.updateOne({ _id : _id }, {$push : {friends : target_id}});
+      
       var user = await User.findOne({ _id }, (err, user) => {
         if (err) return console.log(err)
         if (!user) return console.log("사용자가 없습니다")
         return user;
       });
+      console.log("Get User", user)
+
+      var fID_List = user.friends;
+      console.log(fID_List);
+
+      var fList = await User.find({_id : fID_List});
+      console.log("fList", fList);
+      user.friends = fList;
       return user;
     } catch (err) {
       console.log(err);
     }
   },
-  createRoom: ({ input }) => {
-    var roomID = rndStringGenerator();
-    input["room_id"] = roomID;
-    input["reg_date"] = new Date();
-    Rooms.push(input);
-    return input;
+  createRoom: async ({ input }) => {
+    try {
+
+    } catch (err) {
+      console.log(err);
+    }
   },
   joinRoom: ({ id, room_id }) => {
 
