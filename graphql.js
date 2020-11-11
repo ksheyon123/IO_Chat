@@ -64,6 +64,7 @@ type Mutation {
   addUser(input : UserInput) : User
   addFriend(_id : ID!, target_id : ID!) : User
   createRoom (input : RoomInput) : Room
+  joinRoom(_id : ID!, room_id : ID!) : Room
   newMessage (input : MessageInput) : Message
 }
 `)
@@ -78,8 +79,11 @@ const resolver = {
         return user;
       });
       var fID_List = user.friends;
+      var rID_List = user.rooms;
       var fList = await User.find({ _id: fID_List });
+      var rList = await Room.find({ _id: rID_List });
       user.friends = fList;
+      user.rooms = rList;
       return user;
     } catch (err) {
       console.log("User Error : ", err);
@@ -128,7 +132,8 @@ const resolver = {
   },
   addFriend: async ({ _id, target_id }) => {
     try {
-      await User.updateOne({ _id: _id }, { $push: { friends: target_id } });
+      await User.updateOne({ _id: _id }, { $addToSet: { friends: target_id } });
+      await User.updateOne({ _id: target_id }, { $addToSet: { friends: _id } });
 
       var user = await User.findOne({ _id }, (err, user) => {
         if (err) return console.log(err)
@@ -151,13 +156,13 @@ const resolver = {
     try {
 
       var user = await User.findOne({_id : input.id});
-      rawObject.user = user;
-      rawObject.name = input.name;
+      var reg_date = new Date().toISOString();
+      rawObject = {user : user, name : input.name, logs : [], reg_date : reg_date}
       var room = new Room();
       room.user = [rawObject.user];
       room.name = rawObject.name;
       room.logs = [];
-      room.reg_date = new Date().toISOString();
+      room.reg_date = rawObject.reg_date;
       // Replace fakeDatabase to real database Function
       room.save((err) => {
         if (err) {
@@ -165,15 +170,24 @@ const resolver = {
           return err;
         }
       });
-      console.log("room_id : ", room._id)
       await User.updateOne({_id : input.id}, {$push : {rooms : room._id}});
       return room;
     } catch (err) {
       console.log(err);
     }
   },
-  joinRoom: ({ id, room_id }) => {
-
+  joinRoom: async ({ _id, room_id }) => {
+    try {
+      await User.updateOne({_id : _id }, {$addToSet : {rooms : room_id}});
+      await Room.updateOne({_id : room_id} , {$addToSet : {user : _id}});
+      var room = await Room.findOne({_id : room_id});
+      var uID_List = room.user;
+      var uList = await User.find({ _id : uID_List});
+      room.user = uList;
+      return room;
+    } catch (err) {
+      console.log(err);
+    }
   },
   leaveRoom: ({ room_id }) => {
 
