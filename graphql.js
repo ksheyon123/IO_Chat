@@ -26,16 +26,16 @@ type Room {
   _id: ID!
   user : [User!]
   name : String!
-  newlog : [Message!]
-  oldlog : [Message!]
+  logs : [Message!]
   reg_date : String!
 }
 
 type Message {
   room_id : ID!
+  owner : ID!
   message : String!
   reg_time : String!
-  read : Boolean!
+  read : Int!
 }
 
 input UserInput {
@@ -45,14 +45,13 @@ input UserInput {
 }
 
 input RoomInput {
+  id : ID!  
   name : String!
-  user : UserInput
 }
 
 input MessageInput {
   room_id : ID!
   message : String!
-  read : Boolean!
 }
 
 type Query {
@@ -73,11 +72,14 @@ const resolver = {
   user: async ({ _id }) => {
     console.log("GraphQL Get User : ", _id)
     try {
-      var user = await User.findOne({ _id : _id }, (err, user) => {
+      var user = await User.findOne({ _id: _id }, (err, user) => {
         if (err) return console.log(err)
         if (!user) return console.log("사용자가 없습니다")
         return user;
       });
+      var fID_List = user.friends;
+      var fList = await User.find({ _id: fID_List });
+      user.friends = fList;
       return user;
     } catch (err) {
       console.log("User Error : ", err);
@@ -86,7 +88,7 @@ const resolver = {
   addUser: async ({ input }) => {
     console.log("GraphQL Add User : ", input)
     var rawObject = {
-      name: input.name, phone: input.phone, email: input.email, friends: [], rooms : []
+      name: input.name, phone: input.phone, email: input.email, friends: [], rooms: []
     }
     try {
       var user = new User();
@@ -113,6 +115,7 @@ const resolver = {
         if (err) return console.log(err);
         return user;
       });
+
       console.log(users)
 
       return users;
@@ -124,22 +127,18 @@ const resolver = {
 
   },
   addFriend: async ({ _id, target_id }) => {
-    console.log("_id", _id, " target_id ", target_id)
     try {
-      await User.updateOne({ _id : _id }, {$push : {friends : target_id}});
-      
+      await User.updateOne({ _id: _id }, { $push: { friends: target_id } });
+
       var user = await User.findOne({ _id }, (err, user) => {
         if (err) return console.log(err)
         if (!user) return console.log("사용자가 없습니다")
         return user;
       });
-      console.log("Get User", user)
 
       var fID_List = user.friends;
-      console.log(fID_List);
 
-      var fList = await User.find({_id : fID_List});
-      console.log("fList", fList);
+      var fList = await User.find({ _id: fID_List });
       user.friends = fList;
       return user;
     } catch (err) {
@@ -147,8 +146,28 @@ const resolver = {
     }
   },
   createRoom: async ({ input }) => {
+    console.log(input)
+    var rawObject = new Object();
     try {
 
+      var user = await User.findOne({_id : input.id});
+      rawObject.user = user;
+      rawObject.name = input.name;
+      var room = new Room();
+      room.user = [rawObject.user];
+      room.name = rawObject.name;
+      room.logs = [];
+      room.reg_date = new Date().toISOString();
+      // Replace fakeDatabase to real database Function
+      room.save((err) => {
+        if (err) {
+          console.error(err);
+          return err;
+        }
+      });
+      console.log("room_id : ", room._id)
+      await User.updateOne({_id : input.id}, {$push : {rooms : room._id}});
+      return room;
     } catch (err) {
       console.log(err);
     }

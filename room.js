@@ -4,8 +4,7 @@ var Schema = mongoose.Schema;
 var roomSchema = new Schema({
     user : Array,
     name : String,
-    newlog : Array,
-    oldlog : Array,
+    logs : Array,
     reg_date : Date
 })
 
