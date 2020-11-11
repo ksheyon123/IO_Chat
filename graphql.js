@@ -2,6 +2,14 @@ const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
 const { buildSchema } = require('graphql');
 const { rndStringGenerator } = require('./rndStringGenerator');
+const User = require('./user');
+
+const mongoose = require('mongoose');
+var db = mongoose.connection;
+db.once('open', () => {
+  console.log("Connected to mongodb server");
+})
+mongoose.connect("mongodb://localhost:27017/local", { useNewUrlParser: true, useUnifiedTopology: true });
 
 let user = [];
 let Rooms = []
@@ -40,7 +48,7 @@ input UserInput {
 
 input RoomInput {
   name : String!
-  user : User!
+  user : UserInput
 }
 
 input MessageInput {
@@ -63,42 +71,53 @@ type Mutation {
 }
 `)
 
-class User {
-  constructor(props) {
-    this.id = props.id,
-      this.name = props.name,
-      this.phone = props.phone,
-      this.email = props.email,
-      this.friends = props.friends
-  }
-}
-
 const resolver = {
-  user: ({ id }) => {
-    var data = Object.keys(user).filter(element => {
-      if (element.id == id) {
-        return element;
-      }
-    })
-    return user[data]
+  user: async ({ id }) => {
+    console.log("GraphQL Get User : ", id)
+    try {
+      await User.findOne({ id }, (err, user) => {
+        if (err) return console.log(err)
+        if (!user) return console.log("사용자가 없습니다")
+        console.log(user)
+        return user;
+      }).catch(err => console.log(err))
+    } catch (err) {
+      console.log("User Error : ", err);
+    }
+  },
+  addUser: async ({ input }) => {
+    console.log("GraphQL Add User : ", input)
+    var objectID = rndStringGenerator();
+    var rawObject = {
+      id: objectID, name: input.name, phone: input.phone, email: input.email, friends: [], rooms : []
+    }
+    try {
+      var user = new User();
+      user.id = rawObject.id;
+      user.name = rawObject.name;
+      user.phone = rawObject.phone;
+      user.email = rawObject.email;
+      user.friends = rawObject.friends;
+      user.rooms = rawObject.rooms;
+      // Replace fakeDatabase to real database Function
+      user.save((err) => {
+        if (err) {
+          console.error(err);
+          return err;
+        }
+      });
+      return new User(rawObject);
+    } catch (err) {
+      console.log(err);
+    }
   },
   users: () => {
     console.log(user)
     console.log()
     return user;
   },
-  getRooms : ({id}) => {
+  getRooms: ({ id }) => {
 
-  },
-  addUser: ({ input }) => {
-    var objectID = rndStringGenerator();
-    var rawObject = {
-      id: objectID, name: input.name, phone: input.phone, email: input.email, friends: []
-    }
-
-    // Replace fakeDatabase to real database Function
-    user.push(rawObject);
-    return new User(rawObject);
   },
   addFriend: ({ id, input }) => {
     console.log(id, input)
@@ -126,13 +145,13 @@ const resolver = {
     Rooms.push(input);
     return input;
   },
-  joinRoom : ({id, room_id}) => {
-    
-  },
-  leaveRoom : ({room_id}) => {
+  joinRoom: ({ id, room_id }) => {
 
   },
-  newMessage : ({input}) => {
+  leaveRoom: ({ room_id }) => {
+
+  },
+  newMessage: ({ input }) => {
     console.log(input)
   }
 }
