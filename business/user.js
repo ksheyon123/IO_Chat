@@ -7,22 +7,27 @@ module.exports = (function () {
         return await result;
     }
 
-    const findWithID = async (id) => {
-        return await model.User.findOne({ _id: id })
+    const findWithID = async (FromData) => {
+        return await model.User.findOne(FromData)
     }
 
     const findAll = async () => {
         return await model.User.find();
     }
 
-    const findChunk = async (fIDs) => {
-        return await model.User.find(fIDs)
+    const findChunk = async (FromData) => {
+        return await model.User.find(FromData)
+    }
+
+    const updateOne = async (key, parameter) => {
+        return await model.User.updateOne(key, parameter)
     }
 
     return {
         addUser: addUser,
         findWithID: findWithID,
         findAll: findAll,
-        findChunk : findChunk
+        findChunk : findChunk,
+        updateOne: updateOne
     }
 })

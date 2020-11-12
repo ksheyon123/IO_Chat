@@ -1,28 +1,33 @@
 module.exports = (function () {
     const model = require('../mongoose/model');
 
-    const addRoom = async (object) => {
-        const newUser = new model.User(object);
-        const result = await newUser.save();
+    const createRoom = async (object) => {
+        const newRoom = new model.Room(object);
+        const result = await newRoom.save();
         return await result;
     }
 
-    const findWithID = async (id) => {
-        return await model.User.findOne({ _id: id })
+    const findWithID = async (FromData) => {
+        return await model.Room.findOne(FromData)
     }
 
     const findAll = async () => {
-        return await model.User.find();
+        return await model.Room.find();
     }
 
-    const findChunk = async (fIDs) => {
-        return await model.User.find(fIDs)
+    const findChunk = async (FromData) => {
+        return await model.Room.find(FromData);
+    }
+
+    const updateOne = async (key, parameter) => {
+        return await model.Room.updateOne(key, parameter)
     }
 
     return {
-        addRoom: addRoom,
+        createRoom: createRoom,
         findWithID: findWithID,
         findAll: findAll,
-        findChunk: findChunk
+        findChunk: findChunk,
+        updateOne: updateOne
     }
 })
