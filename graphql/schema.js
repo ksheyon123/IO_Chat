@@ -1,19 +1,6 @@
-const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
+const dao = require('../business/dao');
 const { buildSchema } = require('graphql');
-const { rndStringGenerator } = require('./rndStringGenerator');
-const User = require('./user');
-const Room = require('./room');
-const Message = require('./message');
-
-const mongoose = require('mongoose');
-var db = mongoose.connection;
-db.once('open', () => {
-  console.log("Connected to mongodb server");
-})
-mongoose.connect("mongodb://localhost:27017/local", { useNewUrlParser: true, useUnifiedTopology: true });
-
-var schema = buildSchema(`
+const schema = buildSchema(`
 type User {
   _id : ID!
   name : String
@@ -74,15 +61,22 @@ const resolver = {
   user: async ({ _id }) => {
     console.log("GraphQL Get User : ", _id)
     try {
-      var user = await User.findOne({ _id: _id }, (err, user) => {
-        if (err) return console.log(err)
-        if (!user) return console.log("사용자가 없습니다")
-        return user;
-      });
-      var fID_List = user.friends;
-      var rID_List = user.rooms;
-      var fList = await User.find({ _id: fID_List });
-      var rList = await Room.find({ _id: rID_List });
+      var user = await dao.user().findWithID(_id);
+      console.log("Get User : ", user)
+
+      var fIDs = user.friends;
+      var rIDs = user.rooms;
+      var fList = await dao.user().findChunk({ _id: fIDs });
+      var rList = await Room.findChunk({ _id: rIDs });
+      // var user = await User.findOne({ _id: _id }, (err, user) => {
+      //   if (err) return console.log(err)
+      //   if (!user) return console.log("사용자가 없습니다")
+      //   return user;
+      // });
+      // var fID_List = user.friends;
+      // var rID_List = user.rooms;
+      // var fList = await User.find({ _id: fID_List });
+      // var rList = await Room.find({ _id: rID_List });
       user.friends = fList;
       user.rooms = rList;
       return user;
@@ -91,38 +85,23 @@ const resolver = {
     }
   },
   addUser: async ({ input }) => {
-    console.log("GraphQL Add User : ", input)
-    var rawObject = {
-      name: input.name, phone: input.phone, email: input.email, friends: [], rooms: []
-    }
     try {
-      var user = new User();
-      user.name = rawObject.name;
-      user.phone = rawObject.phone;
-      user.email = rawObject.email;
-      user.friends = rawObject.friends;
-      user.rooms = rawObject.rooms;
-      // Replace fakeDatabase to real database Function
-      user.save((err) => {
-        if (err) {
-          console.error(err);
-          return err;
-        }
-      });
-      return new User(rawObject);
+      var rawObject = {
+        name: input.name, 
+        phone: input.phone, 
+        email: input.email, 
+        friends: [], 
+        rooms: []
+      }
+      var data = await dao.user().addUser(rawObject);
+      return data;
     } catch (err) {
       console.log(err);
     }
   },
   users: async () => {
     try {
-      var users = await User.find((err, user) => {
-        if (err) return console.log(err);
-        return user;
-      });
-
-      console.log(users)
-
+      var users = await dao.user().findAll();
       return users;
     } catch (err) {
       console.log(err);
@@ -234,11 +213,4 @@ const resolver = {
   }
 }
 
-var app = express();
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  rootValue: resolver,
-  graphiql: true,
-}));
-app.listen(4000);
-console.log('Running a GraphQL API server at http://192.168.0.120:4000/graphql');
+module.exports = {schema : schema, resolver : resolver}
