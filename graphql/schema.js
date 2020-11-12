@@ -1,6 +1,5 @@
 const dao = require('../business/dao');
 const { buildSchema } = require('graphql');
-const { domainToASCII } = require('url');
 const schema = buildSchema(`
 type User {
   _id : ID!
@@ -55,17 +54,19 @@ type Mutation {
   createRoom (input : RoomInput) : Room
   joinRoom(_id : ID!, room_id : ID!) : Room
   newMessage (input : MessageInput) : Message
+  leaveRoom (_id : ID!, room_id : ID!) : User
 }
 `)
 
 const resolver = {
   user: async ({ _id }) => {
-    console.log("GraphQL Get User : ", _id)
     try {
       var user = await dao.user().findWithID({ _id: _id });
+      console.log("Get User : ", user)
       var fIDs = user.friends;
       var rIDs = user.rooms;
       var fList = await dao.user().findChunk({ _id: fIDs });
+      console.log(fList)
       var rList = await dao.room().findChunk({ _id: rIDs });
       user.friends = fList;
       user.rooms = rList;
@@ -111,7 +112,6 @@ const resolver = {
     }
   },
   createRoom: async ({ input }) => {
-    console.log(input)
     try {
       var reg_date = new Date().toISOString();
       var rawObject = {
@@ -121,8 +121,10 @@ const resolver = {
         reg_date: reg_date
       }
       var room = await dao.room().createRoom(rawObject);
-      await dao.user().updateOne({ _id: input.id }, { $push: { rooms: room._id } });
-      await dao.room().updateOne({ _id: room.id }, { $push: { user: input.id } })
+      console.log("Create Room : ", room);
+      console.log("rawObjec",rawObject)
+      await dao.user().updateOne({ _id: input.id }, { $addToSet: { rooms: room._id.toString() } });
+      await dao.room().updateOne({ _id: room.id }, { $addToSet: { user: input.id }})
       return room;
     } catch (err) {
       console.log(err);
@@ -142,46 +144,44 @@ const resolver = {
       console.log(err);
     }
   },
-  leaveRoom: ({ room_id }) => {
-
+  leaveRoom: async ({_id,  room_id}) => {
+    console.log(_id)
+    console.log(room_id)
+    try {
+      await dao.user().updateOne({_id : _id}, {$pull : {rooms : room_id }});
+      await dao.room().updateOne({_id : room_id}, {$pull : {user : _id }})
+      var room = await dao.user().findWithID({_id : _id});
+      console.log(room)
+      return room;
+    } catch (err) {
+      console.log(err);
+    }
   },
   room: async ({ _id }) => {
     try {
-      var room = await Room.findOne({ _id: _id });
-      var mList = await Message.find({ room_id: _id });
-
-      var uID_List = room.user;
-      var user = await User.find({ _id: uID_List });
-      console.log("room : ", room);
-      console.log("mList : ", mList)
+      var room = await dao.room().findWithID({ _id: _id });
+      console.log(room)
+      var mList = await dao.message().findChunk({ room_id: _id });
+      var uIDs = room.user;
+      var user = await dao.user().findChunk({ _id: uIDs });
       room.user = user;
       room.logs = mList;
+      console.log("Get Room Info : ", room)
       return room;
     } catch (err) {
       console.log(err);
     }
   },
   newMessage: async ({ input }) => {
-    console.log(input);
-    var rawObject = {
-      room_id: input.room_id,
-      owner: input.owner,
-      message: input.message,
-      reg_time: new Date().toISOString(),
-    }
     try {
-      var message = new Message();
-      message.room_id = rawObject.room_id;
-      message.owner = rawObject.owner;
-      message.message = rawObject.message;
-      message.reg_time = rawObject.reg_time;
-      message.save((err) => {
-        if (err) {
-          console.error(err);
-          return err;
-        }
-      });
-      return new Message(rawObject);
+      var rawObject = {
+        room_id: input.room_id,
+        owner: input.owner,
+        message: input.message,
+        reg_time: new Date().toISOString(),
+      }
+      var message = await dao.message().newMessage(rawObject)
+      return message;
     } catch (err) {
       console.log(err);
     }
